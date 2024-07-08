@@ -12,7 +12,8 @@ ngspicejs script that finds new LC oscillator topologies
 # How to use it
 
 1. Run script until it finds something
-2. Simulate found circuit and manually remove unnecessary parts (as long as they don't affect oscilation)
+2. Get schematic (it prints url with schematic editor)
+3. Simulate found circuit and manually remove unnecessary parts (as long as they don't affect oscilation)
     - combine parallel or series resistors
     - remove large resistors
     - short small resistors
@@ -104,4 +105,8 @@ Some have quite narrow range of values where they oscillate.
 # All curves
 
 - [Table with all oscillators and all curves](TABLE.md)
+
+# Support
+
+You can support development on [Patreon](https://www.patreon.com/DusanHalicky) or you can hire me via [Upwork](https://www.upwork.com/freelancers/~013b4c3d6e772fdb01)
 
