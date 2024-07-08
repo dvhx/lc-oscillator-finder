@@ -1,0 +1,62 @@
+{
+    "oscillator": "LCCRT9",
+    "components": {
+        "resistor": 1,
+        "inductor": 1,
+        "capacitor": 2,
+        "npn": 1
+    },
+    "vcc": {
+        "resistor": 0,
+        "inductor": 1,
+        "capacitor": 0,
+        "collector": 1,
+        "base": 0,
+        "emitter": 0
+    },
+    "gnd": {
+        "resistor": 1,
+        "inductor": 0,
+        "capacitor": 1,
+        "collector": 0,
+        "base": 0,
+        "emitter": 0
+    },
+    "stable_time": "1m",
+    "stable_index": 1007,
+    "currents": {
+        "battery": {
+            "min": -0.0032065157412475287,
+            "max": 0.003120865501761383,
+            "avg": 0.000296118050934417,
+            "rms": 0.002350098581353069,
+            "amplitude": 0.003163690621504456
+        },
+        "coil": {
+            "min": -0.003121965526704817,
+            "max": 0.003205998215762429,
+            "avg": 0.00007169349424892098,
+            "rms": 0.0022431372457882713,
+            "amplitude": 0.003163981871233623
+        }
+    },
+    "gain_rms": 0.9544864473288542,
+    "gain_amplitude_avg": 10.68486659712065,
+    "voltages": {
+        "base": {
+            "min": 2.6768448597746786,
+            "max": 3.9485616051012666,
+            "avg": 3.29944102318119,
+            "rms": 3.329187153817851,
+            "amplitude": 0.635858372663294
+        },
+        "emitter": {
+            "min": 2.6487768626688823,
+            "max": 3.3048189055927852,
+            "avg": 2.9620921033751526,
+            "rms": 2.970686614155376,
+            "amplitude": 0.32802102146195145
+        }
+    },
+    "frequency": 32573.262741151284
+}

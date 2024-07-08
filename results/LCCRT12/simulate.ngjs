@@ -1,0 +1,17 @@
+#!/usr/bin/env ngspicejs
+// Simulate LC oscillator and show key charts
+// linter: ngspicejs-lint
+"use strict";
+
+battery('U1', 'bat', 0, 3.3).rs(1);
+inductor('L1', 'bat', 'collector', '0.91m', 6.5);
+capacitor('C1', 'collector', 'emitter', '47n');
+capacitor('C2', 'bat', 'emitter', '47n');
+npn('T1', 'collector', 'bat', 'emitter', '2N3904');
+resistor('R1', 'emitter', 0, '10k');
+
+var lccrt_signature = include('../../js/lccrt_signature.js');
+echo('signature', lccrt_signature());
+
+var test_oscillator = include('../../js/test_oscillator.js');
+test_oscillator('1m', ['collector', 'emitter']);

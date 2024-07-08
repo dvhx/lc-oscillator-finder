@@ -1,0 +1,213 @@
+#!/usr/bin/env ngspicejs
+// Find LC oscillators with random topology
+// linter: ngspicejs-lint
+"use strict";
+
+// configuration
+var config = file_read_json('config.json');
+
+// use random seed
+if (config.seed > 0) {
+    echo('seed', config.seed);
+    mersenne_twister(config.seed).replace_math_random();
+}
+
+dir_create('candidates');
+
+var nets = {}; // Object (key is net name) with all devices connected to this net, e.g. nets['net1'] = [r1, c3];
+
+function create_random_topology() {
+    // Add battery, decoupling cap and random parts and nets
+
+    // battery
+    var bat = battery('U1', 'bat', 0, config.battery_voltage).rs(config.battery_rs);
+    // decoupling capacitor
+    var cd = capacitor('Cd', 'bat', 0, '10u');
+    nets.bat = [bat.attr.name, cd.attr.name];
+    nets[0] = [bat.attr.name, cd.attr.name];
+
+    // add random nets
+    var i, net_names = ['bat', 0], a, b, r, c, n, internal_nets = [];
+    for (i = 0; i < config.counts.net; i++) {
+        n = 'net' + (i + 1).toString();
+        net_names.push(n);
+        internal_nets.push(n);
+    }
+    //echo('net_names:');
+    //echo_json(net_names);
+
+    function two_nets() {
+        // pick 2 distinct nets
+        var na = '';
+        var nb = '';
+        while (na === nb) {
+            na = net_names.randomItem();
+            nb = net_names.randomItem();
+        }
+        return [na, nb]; //{a: na, b: nb};
+    }
+
+    function three_distinct_nets() {
+        // pick 3 distinct nets (all 3 must be different)
+        var na = '';
+        var nb = '';
+        var nc = '';
+        while (na === nb || na === nc || nb === nc) {
+            na = net_names.randomItem();
+            nb = net_names.randomItem();
+            nc = net_names.randomItem();
+        }
+        return [na, nb, nc];
+    }
+
+    // add exactly one inductor
+    [a, b] = two_nets();
+    inductor('L1', a, b, config.inductor_l).rs(config.inductor_rs);
+
+    // add npn transistors
+    for (i = 0; i < config.counts.npn; i++) {
+        [a, b, c] = three_distinct_nets();
+        npn('T' + (i + 1), a, b, c, config.npn_model);
+    }
+
+    // add resistors between 2 random nets
+    for (i = 0; i < config.counts.resistor; i++) {
+        [a, b] = two_nets();
+        r = resistor('R' + (i + 1), a, b, series_e12(10, '10M').randomItem());
+        nets[a] = nets[a] || [];
+        nets[a].push(r.attr.name);
+        nets[b] = nets[b] || [];
+        nets[b].push(r.attr.name);
+    }
+
+    // add capacitors between 2 random nets
+    var cap_nets = {
+        'bat_0': true
+    };
+    for (i = 0; i < config.counts.capacitor; i++) {
+        var stuck = 0;
+        while (true) {
+            stuck++;
+            if (stuck > 1000) {
+                hint("Lower the amount of capacitors or increase the amount of nets, for example:");
+                hint("config.counts.net = " + config.counts.net + ";");
+                hint("config.counts.resistor = " + config.counts.resistor + ';');
+                hint("config.counts.capacitor = " + config.counts.capacitor - 1 + ';');
+                throw new Exception("Cannot place capacitor C" + (i + 1) + " because all other net pairs already have a cap, this would create parallel caps!");
+            }
+            [a, b] = two_nets();
+            // do not create parallel caps
+            if (cap_nets[a + '_' + b] || cap_nets[b + '_' + a]) {
+                //warn('parallel cap ' + a + ' ' + b);
+                continue;
+            }
+            break;
+        }
+        cap_nets[a + '_' + b] = true;
+        c = capacitor('C' + (i + 1), a, b, i === 0 ? config.capacitor : series_e12('10p', '10u').randomItem());
+        nets[a] = nets[a] || [];
+        nets[a].push(r.attr.name);
+        nets[b] = nets[b] || [];
+        nets[b].push(r.attr.name);
+        //echo('c', i + 1, 'a', a, 'b', b);
+    }
+
+    return {
+        internal_nets
+    };
+}
+
+function has_oscillation(aCoilCurrentData) {
+    // Return true if data contains oscillation
+    // second half of coil current must contain current larger than min amplitude
+    var second_half = aCoilCurrentData.slice(Math.floor(aCoilCurrentData.length / 2));
+    var avg = second_half.avg();
+    second_half = second_half.addScalar(-avg);
+    return second_half.range() > config.min_amplitude;
+}
+
+function find_oscillator() {
+    // Keep generating random nets until valid oscillator is found
+    var t;
+    var attempt = 0;
+    while (true) {
+        attempt++;
+        echo_progress();
+        if (attempt % 100 === 0) {
+            echo('tested ' + attempt + ' topologies...');
+        }
+
+        // clear netlist
+        netlist_clear();
+        nets = {};
+
+        // add battery and decoupling cap and random components
+        var r = create_random_topology();
+
+        // check if all internal nets have path to ground and battery
+        var edges = topology_edges(netlist_devices);
+        var issues = false;
+        // jshint -W083
+        r.internal_nets.filter((n) => edges[n]).every((n) => {
+            // Net must have path to ground
+            if (!topology_path_exists(edges, n, '0', ['0', 'bat'])) {
+                issues = true;
+                return false;
+            }
+            // Net must have path to battery
+            if (!topology_path_exists(edges, n, 'bat', ['0', 'bat'])) {
+                issues = true;
+                return false;
+            }
+            return true;
+        });
+        if (issues) {
+            //echo('No path to bat/ground, starting over');
+            continue;
+        }
+
+        // check for singular matrix
+        if (singular_matrix()) {
+            //echo('Singular matrix, trying new topology');
+            continue;
+        }
+        if (!tran_ok()) {
+            //echo('Simulation failed, trying new topology');
+            continue;
+        }
+        // run transient analysis
+        t = tran().step('20u').interval('25m').run();
+        if (!has_oscillation(t.data['I(L1.L0)'])) {
+            continue;
+        }
+        // all checks passed
+        break;
+    }
+
+    // get timestamp
+    var ts = Date.now();
+
+    // show chart and save it
+    t.chart('I(L1.L0)');
+    t.last_chart.gif('candidates/' + ts + '.gif');
+
+    // save url with schematic
+    echo(netlist_export_schematic_url());
+    file_write('candidates/' + ts + '.url', netlist_export_schematic_url());
+
+    // save netlist as ngjs script
+    var sn = 'candidates/' + ts + '.ngjs';
+    file_write_ngspicejs(sn);
+    file_write(sn, file_read(sn) + '\n' + "tran().step('1u').interval('20m').run().chart('I(L1.L0)');");
+    file_mode(sn, parseInt('0755', 8));
+}
+
+echo('Finding novel LC oscillators, typical rate is one per minute, be patient...');
+var found = 0;
+while (true) {
+    find_oscillator();
+    found++;
+    echo(found, 'oscillator found');
+    beep();
+    //break;
+}

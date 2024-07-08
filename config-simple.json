@@ -1,0 +1,16 @@
+{
+    "seed": 0,
+    "battery_voltage": 3.3,
+    "battery_rs": 10,
+    "inductor_l": "910u",
+    "inductor_rs": 6.5,
+    "capacitor": "47n",
+    "npn_model": "2N3904",
+    "counts": {
+        "net": 2,
+        "capacitor": 3,
+        "resistor": 3,
+        "npn": 1
+    },
+    "min_amplitude": 1e-7
+}
