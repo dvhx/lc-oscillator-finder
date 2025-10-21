@@ -1,0 +1,17 @@
+{
+    "seed": 0,
+    "battery_voltage": 3.3,
+    "battery_rs": 10,
+    "inductor_l": "1m",
+    "inductor_rs": 4,
+    "capacitor": "47n",
+    "jfet_n_model": "2N5457",
+    "counts": {
+        "net": 3,
+        "capacitor": 3,
+        "resistor": 3,
+        "npn": 0,
+        "jfet_n": 1
+    },
+    "min_amplitude": 1e-7
+}

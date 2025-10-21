@@ -69,6 +69,16 @@ function create_random_topology() {
         [a, b, c] = three_distinct_nets();
         npn('T' + (i + 1), a, b, c, config.npn_model);
     }
+    // add jfet_n transistors
+    for (i = 0; i < config.counts.jfet_n; i++) {
+        [a, b, c] = three_distinct_nets();
+        jfet_n('T' + (i + 1), a, b, c, config.jfet_n_model);
+    }
+    // add jfet_p transistors
+    for (i = 0; i < config.counts.jfet_p; i++) {
+        [a, b, c] = three_distinct_nets();
+        jfet_p('T' + (i + 1), a, b, c, config.jfet_p_model);
+    }
 
     // add resistors between 2 random nets
     for (i = 0; i < config.counts.resistor; i++) {
@@ -106,9 +116,9 @@ function create_random_topology() {
         cap_nets[a + '_' + b] = true;
         c = capacitor('C' + (i + 1), a, b, i === 0 ? config.capacitor : series_e12('10p', '10u').randomItem());
         nets[a] = nets[a] || [];
-        nets[a].push(r.attr.name);
+        nets[a].push(c.attr.name);
         nets[b] = nets[b] || [];
-        nets[b].push(r.attr.name);
+        nets[b].push(c.attr.name);
         //echo('c', i + 1, 'a', a, 'b', b);
     }
 
